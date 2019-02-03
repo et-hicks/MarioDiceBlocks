@@ -1,0 +1,205 @@
+---
+title: "Mario"
+author: "Ethan Hicks"
+date: "November 5, 2018"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.path = "./images/")
+```
+
+
+```{r}
+library(ggplot2)
+dice <- c(1, 2, 3, 4, 5, 6)
+mario <- c(1, 3, 3, 3, 5, 6)
+luigi <- c(1, 1, 1, 5, 6, 7)
+peach <- c(0, 2, 4, 4, 4, 6)
+daisy <- c(3, 3, 3, 3, 4, 4)
+wario <- c(0, 0, 6, 6, 6, 6)
+waluigi <- c(0, 1, 3, 5, 5, 7)
+yoshi <- c(0, 1, 3, 3, 5, 7)
+rosalina <- c(0, 0, 2, 3, 4, 8)
+dk <- c(0, 0, 0, 0, 10, 10)
+diddy <- c(0,  0, 0, 7, 7, 7)
+bowser <- c(0, 0, 1, 8, 9, 10)
+goomba <- c(0, 0, 3, 4, 5, 6)
+shy <- c(0, 4, 4, 4, 4, 4)
+koopa <- c(1, 1, 2, 3, 3, 10)
+monty <- c(0, 2, 3, 4, 5, 6)
+jr <- c(1, 1, 1, 4, 4, 9)
+boo <- c(0, 0, 5, 5, 7, 7)
+hammer <- c(0, 1, 1, 5, 5, 5)
+dry <- c(1, 1, 1, 6, 6, 6)
+pom <- c(0, 3, 3, 3, 3, 8)
+
+chars <- data.frame(dice, mario, luigi, peach, daisy, wario, waluigi, yoshi, rosalina, dk, 
+                    diddy, bowser, goomba, shy, koopa, monty,jr, boo, hammer, dry, pom)
+
+nrow(chars)
+ncol(chars)
+
+people <- c("Dice", "Mario", "Luigi", "Peach", "Daisy", "Wario", "Waluigi", "Yoshi", "Rosalina", 
+            "Donkey Kong", "Diddy Kong", "Bowser", "Goomba", "Shy Guy", "Koopa Troopa", 
+            "Monty Mole", "Bowser Jr.", "Boo", "Hammer Bro", "Dry Bones", "Pom Pom")
+
+names(chars) <- people
+expectations <- unlist(lapply(chars, mean))
+length(expectations)
+means <- data.frame(expectations, people)
+```
+
+## Random Walk Simulation
+
+```{r}
+char_mat <- matrix(c(dice, mario, luigi, peach, daisy, wario, waluigi, yoshi, rosalina, dk, 
+                    diddy, bowser, goomba, shy, koopa, monty,jr, boo, hammer, dry, pom), 
+                   nrow = length(expectations), ncol = 6, byrow = T)
+
+char_mat
+sample(char_mat[1, ], size = 3)
+
+samp <- 1000
+walk <- matrix(c(rep(0, samp)), nrow = 1, ncol = 1000)
+walks <- data.frame(rep(0, samp))
+
+
+zeros <- c()
+for (i in 1:21){
+  pos_vec <- sample(char_mat[i, ], size = 1000, replace = T)
+  walks <- data.frame(walks, pos_vec)
+  zeros <- c(zeros, length(pos_vec[pos_vec == 0]))
+}
+
+
+
+zeros
+length(zeros[zeros == 0])
+totals <- unlist(lapply(walks, sum))
+names(totals) <- c("zero", people)
+means$totals <- totals[2:22]
+means$zeros <- zeros
+means$coins <- as.integer(c(0, 0, 0, 0, 0, means$zeros[means$people == "Wario"]*(-2), 
+                 means$zeros[means$people == "Waluigi"]*(-3),0,
+                 means$zeros[means$people == "Rosalina"]*2,
+                 means$zeros[means$people == "Donkey Kong"]*5/4,
+                 means$zeros[means$people == "Diddy Kong"]*2/3,
+                 means$zeros[means$people == "Bowser"]*(-3),
+                 means$zeros[means$people == "Goomba"]*2,0,0,
+                 means$zeros[means$people == "Monty Mole"],0,
+                 means$zeros[means$people == "Boo"]*(-2),
+                 means$zeros[means$people == "Hammer Bro"]*(3),0,0))
+                 
+
+
+means
+```
+
+```{r against-a-die}
+ggplot(means, aes(x = reorder(people, -expectations), y = expectations))+
+  geom_point()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+  geom_hline(yintercept = 3.5)+
+  ggtitle("Expected Value of each Dice Roll")+
+  xlab("Character")+ylab("Expected Value")+
+  geom_text(aes(19, 3.55, label = "Expected Value of a D6"))+
+  labs(subtitle = "u/ElectorCaptain")
+```
+
+```{r against-totals}
+ggplot(means, aes(x = reorder(people, -totals), y = totals))+
+  geom_point()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+  ggtitle("Characters sorted by total number of spaces moved")+
+  xlab("Characters")+ylab("Total number of spaces moved")+
+  labs(subtitle = "u/ElectorCaptain")
+```
+
+```{r against-zeros}
+ggplot(means, aes(x = reorder(people, zeros), y = totals, size = zeros))+
+  geom_point()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+  geom_vline(xintercept = 7)+
+  geom_text(aes(4, 4500, label = "These people always move"), size = 3)+
+  geom_text(aes(15, 4500, label = "These people sometimes don't move"), size = 3)+
+  ggtitle("Characters Sorted by number of times they dont move, decreasing")+
+  xlab("Characters")+
+  ylab("Total Number of spaces moved")+
+  labs(subtitle = "u/ElectorCaptain")
+```
+
+```{r against-coins}
+ggplot(means, aes(x = reorder(people, -coins), y = totals, size = coins))+
+  geom_point()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+  geom_vline(xintercept = length(means$coins[means$coins > 0]))+
+  geom_text(aes(3, 4600,label = "These people earn coins"), size = 3)+
+  geom_vline(xintercept = 20-length(means$coins[means$coins < -1]))+
+  geom_text(aes(13, 4600,label = "These people earn no coins"), size = 3)+
+  geom_text(aes(19, 4600,label = "These people lose coins"), size = 3)+
+  xlab("Characters")+ylab("Total number of Steps")+
+  ggtitle("Characters sorted by total number of coins earned")+
+  labs(subtitle = "u/ElectorCaptain")
+```
+
+```{r turn-length-15}
+dies <- function(die, turns, simulations){
+  rolls <- c()
+  for (i in 1:turns){
+    rolls <- c(rolls, mean(sample(die, simulations, replace = TRUE)))
+  }
+  return(sum(rolls))
+}
+
+
+games <- function(mat, game_turns, draws){
+  turns <- c()
+  for ( i in seq(nrow(mat))){
+    spaces <- dies(mat[i, ], game_turns, draws)
+    turns <- c(turns, spaces)
+  }
+  return(turns)
+}
+
+
+means$fifteen <- games(char_mat, 15, 1000)
+means$twenty <- games(char_mat, 20, 1000)
+means$ten <- games(char_mat, 10, 1000)
+means
+
+ggplot(means, aes(x = reorder(people, -fifteen), y = fifteen))+
+  geom_point()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+  ggtitle("Characters sorted by total number of spaces moved, fifteen turns")+
+  xlab("Characters")+ylab("Total number of spaces moved")+
+  labs(subtitle = "u/ElectorCaptain")
+```
+
+```{r coins-against-player}
+ggplot(means, aes(x = reorder(people, totals), y = coins, size = totals))+
+  geom_point()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+  ggtitle("Characters sorted by total number of coins gained, 1000 turns")+
+  xlab("Characters")+ylab("Total number of coins gained")+
+  labs(subtitle = "u/ElectorCaptain")
+```
+
+```{r zeros-against-player}
+ggplot(means, aes(x = reorder(people, -zeros), y = zeros, size = coins, color = totals))+
+  geom_point()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+  ggtitle("Characters sorted by total number of zero moving turns")+
+  xlab("Characters")+ylab("Total number of turns with no movement")+
+  labs(subtitle = "u/ElectorCaptain")
+```
+
+```{r sorted-zeros}
+ggplot(means, aes(x = reorder(people, coins), y = coins, size = totals))+
+  geom_point()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+  ggtitle("Characters sorted by zeros")+
+  xlab("Characters")+ylab("Total number of coins gained")+
+  labs(subtitle = "u/ElectorCaptain")
+```
+
